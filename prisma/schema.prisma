@@ -1,0 +1,205 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ActivityCategory {
+  ADVENTURE
+  FOOD
+  CULTURE
+  NATURE
+  NIGHTLIFE
+  SHOPPING
+}
+
+enum ExpenseCategory {
+  TRANSPORT
+  ACCOMMODATION
+  ACTIVITY
+  FOOD
+  OTHER
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  passwordHash     String             @map("password_hash")
+  role             Role               @default(USER)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  profile          Profile?
+  tripMembers      TripMember[]
+  savedDestinations SavedDestination[]
+
+  @@map("users")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  language  String   @default("English")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+model Trip {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  title       String
+  description String?      @db.Text
+  coverImage  String?      @map("cover_image")
+  startDate   DateTime     @map("start_date")
+  endDate     DateTime     @map("end_date")
+  isPublic    Boolean      @default(false) @map("is_public")
+  shareSlug   String?      @unique @map("share_slug")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  stops       TripStop[]
+  expenses    Expense[]
+  members     TripMember[]
+  sharedTrips SharedTrip[]
+
+  @@map("trips")
+}
+
+model City {
+  id               String             @id @default(cuid())
+  name             String
+  country          String
+  region           String?
+  latitude         Float
+  longitude        Float
+  description      String?            @db.Text
+  imageUrl         String?            @map("image_url")
+  costIndex        Int                @default(3) @map("cost_index")
+  popularity       Int                @default(5)
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  stops            TripStop[]
+  activities       Activity[]
+  savedDestinations SavedDestination[]
+
+  @@map("cities")
+}
+
+model TripStop {
+  id             String          @id @default(cuid())
+  tripId         String          @map("trip_id")
+  cityId         String          @map("city_id")
+  startDate      DateTime        @map("start_date")
+  endDate        DateTime        @map("end_date")
+  stopOrder      Int             @map("stop_order")
+  notes          String?         @db.Text
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  trip           Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  city           City            @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  itineraryItems ItineraryItem[]
+
+  @@map("trip_stops")
+}
+
+model Activity {
+  id              String           @id @default(cuid())
+  cityId          String           @map("city_id")
+  name            String
+  description     String?          @db.Text
+  category        ActivityCategory
+  durationMinutes Int              @map("duration_minutes")
+  estimatedCost   Float            @map("estimated_cost")
+  imageUrl        String?          @map("image_url")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  city            City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  itineraryItems  ItineraryItem[]
+
+  @@map("activities")
+}
+
+model ItineraryItem {
+  id          String   @id @default(cuid())
+  tripStopId  String   @map("trip_stop_id")
+  activityId  String   @map("activity_id")
+  date        DateTime
+  startTime   String?  @map("start_time")
+  endTime     String?  @map("end_time")
+  customCost  Float?   @map("custom_cost")
+  notes       String?  @db.Text
+  itemOrder   Int      @map("item_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tripStop    TripStop @relation(fields: [tripStopId], references: [id], onDelete: Cascade)
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("itinerary_items")
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  tripId      String          @map("trip_id")
+  category    ExpenseCategory
+  amount      Float
+  currency    String          @default("USD")
+  description String?
+  expenseDate DateTime        @map("expense_date")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  trip        Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("expenses")
+}
+
+model SavedDestination {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  cityId    String   @map("city_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cityId])
+  @@map("saved_destinations")
+}
+
+model TripMember {
+  id        String     @id @default(cuid())
+  tripId    String     @map("trip_id")
+  userId    String     @map("user_id")
+  role      MemberRole @default(OWNER)
+  createdAt DateTime   @default(now()) @map("created_at")
+  trip      Trip       @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, userId])
+  @@map("trip_members")
+}
+
+model SharedTrip {
+  id        String   @id @default(cuid())
+  tripId    String   @map("trip_id")
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@map("shared_trips")
+}
