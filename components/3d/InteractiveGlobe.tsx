@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stars, useTexture } from '@react-three/drei';
+import { OrbitControls, Stars } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe as GlobeIcon, Loader2, ArrowRight, Sparkles } from 'lucide-react';
@@ -41,6 +41,114 @@ function convertLatLngToVector3(lat: number, lon: number, radius = 2) {
   const z = radius * Math.sin(phi) * Math.cos(theta);
 
   return new THREE.Vector3(x, y, z);
+}
+
+// Fail-safe procedural Satellite Texture Generator (runs instantly on client, never crashes)
+function createProceduralSatelliteTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 2048;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  // 1. Deep Ocean Hydrographic Gradient
+  const oceanGrad = ctx.createLinearGradient(0, 0, 0, 1024);
+  oceanGrad.addColorStop(0, '#020b18');
+  oceanGrad.addColorStop(0.2, '#071d36');
+  oceanGrad.addColorStop(0.5, '#0b345e');
+  oceanGrad.addColorStop(0.8, '#071d36');
+  oceanGrad.addColorStop(1, '#020b18');
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(0, 0, 2048, 1024);
+
+  const mapX = (lon: number) => ((lon + 180) / 360) * 2048;
+  const mapY = (lat: number) => ((90 - lat) / 180) * 1024;
+
+  // 2. Latitude / Longitude Grid
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.1)';
+  ctx.lineWidth = 1;
+  for (let lon = -180; lon <= 180; lon += 30) {
+    const x = mapX(lon);
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 1024);
+    ctx.stroke();
+  }
+  for (let lat = -90; lat <= 90; lat += 30) {
+    const y = mapY(lat);
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(2048, y);
+    ctx.stroke();
+  }
+
+  // 3. Draw Continents Landmasses with Coastline Glow
+  const drawLandmass = (pts: [number, number][], fillStyle = '#1b4d3e', strokeStyle = '#34d399') => {
+    ctx.beginPath();
+    pts.forEach(([lat, lon], idx) => {
+      const x = mapX(lon);
+      const y = mapY(lat);
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  };
+
+  // North America
+  drawLandmass([[72, -168], [70, -130], [60, -100], [55, -60], [45, -65], [30, -80], [25, -80], [15, -90], [15, -105], [30, -115], [48, -125], [60, -140], [65, -168]], '#1b4d3e', '#34d399');
+  // South America
+  drawLandmass([[12, -73], [10, -60], [-5, -35], [-22, -40], [-40, -62], [-55, -68], [-45, -75], [-5, -80], [8, -77]], '#1b4d3e', '#34d399');
+  // Europe
+  drawLandmass([[71, 25], [60, 30], [55, 38], [45, 35], [40, 26], [36, -5], [43, -9], [48, -4], [54, 8], [60, 5]], '#1e5443', '#34d399');
+  // Africa
+  drawLandmass([[37, -9], [37, 32], [31, 34], [12, 43], [11, 51], [-11, 40], [-34, 26], [-34, 18], [-5, 12], [5, 9], [15, -17], [25, -15]], '#1c4a38', '#34d399');
+  // Eurasia / Asia
+  drawLandmass([[77, 104], [70, 170], [60, 160], [45, 135], [40, 120], [22, 114], [10, 108], [10, 78], [25, 62], [30, 48], [40, 50], [50, 60], [60, 70], [70, 75]], '#1e5443', '#34d399');
+  // India Subcontinent
+  drawLandmass([[30, 70], [28, 88], [20, 88], [10, 79], [8, 77], [15, 73], [24, 68]], '#1a4e3c', '#34d399');
+  // Australia
+  drawLandmass([[-12, 130], [-12, 142], [-25, 153], [-38, 145], [-35, 117], [-20, 114]], '#225239', '#34d399');
+  // Japan Islands
+  drawLandmass([[45, 142], [40, 140], [35, 135], [31, 130], [35, 133], [43, 144]], '#1e5443', '#34d399');
+  // UK & Ireland
+  drawLandmass([[58, -6], [58, 1], [50, 1], [50, -5]], '#1e5443', '#34d399');
+  // Indonesia
+  drawLandmass([[5, 95], [5, 115], [-8, 115], [-8, 95]], '#1b4d3e', '#34d399');
+
+  // 4. Glowing City Night Lights
+  ctx.fillStyle = '#ffb703';
+  ctx.shadowColor = '#fb8500';
+  ctx.shadowBlur = 6;
+  CITIES.forEach((city) => {
+    const cx = mapX(city.lon);
+    const cy = mapY(city.lat);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  // Urban scatterings
+  ctx.fillStyle = '#ffe3a8';
+  for (let i = 0; i < 300; i++) {
+    const rx = Math.random() * 2048;
+    const ry = Math.random() * 1024;
+    ctx.beginPath();
+    ctx.arc(rx, ry, Math.random() * 1.2 + 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 // 3D Flight Tube Arc component
@@ -83,18 +191,31 @@ function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vec
   );
 }
 
-// Photorealistic Satellite Earth Mesh (Clean Satellite Image Globe with NO text labels)
+// Real Satellite Earth Mesh (Clean Satellite Image Globe with NO text labels)
 function SatelliteEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (city: any) => void; selectedCity: any }) {
   const globeRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
 
-  // Load satellite imagery textures
-  const [colorMap, bumpMap, lightsMap, cloudsMap] = useTexture([
-    'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
-    'https://unpkg.com/three-globe/example/img/earth-topology.png',
-    'https://unpkg.com/three-globe/example/img/earth-night-lights.png',
-    'https://unpkg.com/three-globe/example/img/earth-clouds.png',
-  ]);
+  // Initialize immediately with procedural satellite texture (never null, never throws Suspense error)
+  const [earthTexture, setEarthTexture] = useState<THREE.Texture>(() => createProceduralSatelliteTexture());
+
+  useEffect(() => {
+    // Asynchronously attempt loading high-res NASA Satellite texture from CDN
+    const loader = new THREE.TextureLoader();
+    loader.setCrossOrigin('anonymous');
+    loader.load(
+      'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
+      (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.needsUpdate = true;
+        setEarthTexture(tex);
+      },
+      undefined,
+      () => {
+        // Silently keep procedural texture on load failure
+      }
+    );
+  }, []);
 
   // Smooth rotation animation
   useFrame((state, delta) => {
@@ -128,26 +249,13 @@ function SatelliteEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
         />
       </mesh>
 
-      {/* Pure Satellite Imagery Earth Surface (3D Terrain Relief & Oceans) */}
+      {/* Pure Satellite Imagery Earth Surface */}
       <mesh>
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial
-          map={colorMap}
-          bumpMap={bumpMap}
-          bumpScale={0.04}
-          roughness={0.6}
+          map={earthTexture}
+          roughness={0.5}
           metalness={0.1}
-        />
-      </mesh>
-
-      {/* Earth Night Lights Layer (Glowing Cities on Night Side) */}
-      <mesh>
-        <sphereGeometry args={[2.002, 64, 64]} />
-        <meshBasicMaterial
-          map={lightsMap}
-          transparent
-          opacity={0.8}
-          blending={THREE.AdditiveBlending}
         />
       </mesh>
 
@@ -155,9 +263,9 @@ function SatelliteEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
       <mesh ref={cloudsRef}>
         <sphereGeometry args={[2.035, 64, 64]} />
         <meshStandardMaterial
-          map={cloudsMap}
+          color="#e0f2fe"
           transparent
-          opacity={0.32}
+          opacity={0.15}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
@@ -250,15 +358,13 @@ export default function InteractiveGlobe() {
       <Canvas camera={{ position: [0, 0, 4.5], fov: 55 }} className="w-full h-full">
         {/* Photorealistic Space & Solar Lighting */}
         <ambientLight intensity={0.65} />
-        <directionalLight position={[6, 3, 6]} intensity={2.2} />
-        <directionalLight position={[-6, -3, -6]} intensity={0.6} color="#0284c7" />
+        <directionalLight position={[6, 3, 6]} intensity={2.0} />
+        <directionalLight position={[-6, -3, -6]} intensity={0.5} color="#0284c7" />
         
         {/* Cosmic Background Starfield */}
         <Stars radius={100} depth={50} count={3500} factor={4} saturation={0} fade speed={1.5} />
         
-        <Suspense fallback={null}>
-          <SatelliteEarthMesh onSelectCity={setSelectedCity} selectedCity={selectedCity} />
-        </Suspense>
+        <SatelliteEarthMesh onSelectCity={setSelectedCity} selectedCity={selectedCity} />
         
         <OrbitControls
           enableZoom={true}
