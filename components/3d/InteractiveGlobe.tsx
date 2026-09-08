@@ -43,7 +43,7 @@ function convertLatLngToVector3(lat: number, lon: number, radius = 2) {
   return new THREE.Vector3(x, y, z);
 }
 
-// Procedural Canvas Texture Generator for vibrant realistic Earth fallback
+// High-fidelity procedural Earth texture canvas generator
 function createProceduralEarthTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 2048;
@@ -51,68 +51,134 @@ function createProceduralEarthTexture() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return new THREE.CanvasTexture(canvas);
 
-  // Deep ocean gradient
+  // 1. Deep Ocean Hydrographic Gradient
   const oceanGrad = ctx.createLinearGradient(0, 0, 0, 1024);
-  oceanGrad.addColorStop(0, '#040d1a');
-  oceanGrad.addColorStop(0.2, '#0a2342');
-  oceanGrad.addColorStop(0.5, '#0f3860');
-  oceanGrad.addColorStop(0.8, '#0a2342');
-  oceanGrad.addColorStop(1, '#040d1a');
+  oceanGrad.addColorStop(0, '#030b18');
+  oceanGrad.addColorStop(0.2, '#061830');
+  oceanGrad.addColorStop(0.5, '#0a2c54');
+  oceanGrad.addColorStop(0.8, '#061830');
+  oceanGrad.addColorStop(1, '#030b18');
   ctx.fillStyle = oceanGrad;
   ctx.fillRect(0, 0, 2048, 1024);
 
-  // Grid latitude / longitude lines
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+  // Helper coordinate mapper: lat [-90, 90], lon [-180, 180] -> Canvas [X, Y]
+  const mapX = (lon: number) => ((lon + 180) / 360) * 2048;
+  const mapY = (lat: number) => ((90 - lat) / 180) * 1024;
+
+  // 2. Latitude / Longitude Tactical Grid Overlay
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
   ctx.lineWidth = 1;
-  for (let x = 0; x <= 2048; x += 128) {
+  for (let lon = -180; lon <= 180; lon += 30) {
+    const x = mapX(lon);
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, 1024);
     ctx.stroke();
   }
-  for (let y = 0; y <= 1024; y += 64) {
+  for (let lat = -90; lat <= 90; lat += 30) {
+    const y = mapY(lat);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(2048, y);
     ctx.stroke();
   }
 
-  // Draw Stylized Continents (North America, South America, Eurasia, Africa, Australia)
-  ctx.fillStyle = '#1b4332'; // Lush emerald landmass
-  const drawLand = (pathCoords: [number, number][]) => {
+  // 3. Draw Detailed Continents Landmasses
+  const drawLandmass = (pts: [number, number][], fillStyle = '#154332', strokeStyle = '#2ec4b6') => {
     ctx.beginPath();
-    pathCoords.forEach(([px, py], i) => {
-      const x = (px / 360) * 2048;
-      const y = (py / 180) * 1024;
-      if (i === 0) ctx.moveTo(x, y);
+    pts.forEach(([lat, lon], idx) => {
+      const x = mapX(lon);
+      const y = mapY(lat);
+      if (idx === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
     ctx.closePath();
+    ctx.fillStyle = fillStyle;
     ctx.fill();
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   };
 
   // North America
-  drawLand([[50, 20], [130, 20], [140, 45], [170, 50], [160, 70], [100, 75], [60, 60]]);
-  // South America
-  drawLand([[100, 85], [130, 90], [120, 150], [100, 170], [90, 110]]);
-  // Eurasia & Europe
-  drawLand([[170, 30], [280, 20], [340, 30], [350, 70], [290, 80], [220, 70], [180, 50]]);
-  // Africa
-  drawLand([[170, 75], [220, 75], [230, 120], [200, 150], [180, 120]]);
-  // Australia
-  drawLand([[290, 120], [330, 120], [330, 150], [290, 150]]);
+  drawLandmass([
+    [72, -168], [70, -130], [60, -100], [55, -60], [45, -65],
+    [30, -80], [25, -80], [15, -90], [15, -105], [30, -115],
+    [48, -125], [60, -140], [65, -168]
+  ], '#164e3f', '#34d399');
 
-  // City lights dots
+  // South America
+  drawLandmass([
+    [12, -73], [10, -60], [-5, -35], [-22, -40], [-40, -62],
+    [-55, -68], [-45, -75], [-5, -80], [8, -77]
+  ], '#164e3f', '#34d399');
+
+  // Europe
+  drawLandmass([
+    [71, 25], [60, 30], [55, 38], [45, 35], [40, 26],
+    [36, -5], [43, -9], [48, -4], [54, 8], [60, 5]
+  ], '#1b5240', '#34d399');
+
+  // Africa
+  drawLandmass([
+    [37, -9], [37, 32], [31, 34], [12, 43], [11, 51],
+    [-11, 40], [-34, 26], [-34, 18], [-5, 12], [5, 9],
+    [15, -17], [25, -15]
+  ], '#1c4a37', '#34d399');
+
+  // Eurasia / Asia
+  drawLandmass([
+    [77, 104], [70, 170], [60, 160], [45, 135], [40, 120],
+    [22, 114], [10, 108], [10, 78], [25, 62], [30, 48],
+    [40, 50], [50, 60], [60, 70], [70, 75]
+  ], '#1b5240', '#34d399');
+
+  // India Subcontinent
+  drawLandmass([
+    [30, 70], [28, 88], [20, 88], [10, 79], [8, 77], [15, 73], [24, 68]
+  ], '#194d3b', '#34d399');
+
+  // Australia
+  drawLandmass([
+    [-12, 130], [-12, 142], [-25, 153], [-38, 145], [-35, 117], [-20, 114]
+  ], '#1f4e35', '#34d399');
+
+  // Japan Islands
+  drawLandmass([[45, 142], [40, 140], [35, 135], [31, 130], [35, 133], [43, 144]], '#1b5240', '#34d399');
+
+  // UK & Ireland
+  drawLandmass([[58, -6], [58, 1], [50, 1], [50, -5]], '#1b5240', '#34d399');
+
+  // Indonesia Islands
+  drawLandmass([[5, 95], [5, 115], [-8, 115], [-8, 95]], '#164e3f', '#34d399');
+
+  // 4. City Night Lights & Glowing Nodes
   ctx.fillStyle = '#ffb703';
-  for (let i = 0; i < 400; i++) {
+  ctx.shadowColor = '#fb8500';
+  ctx.shadowBlur = 8;
+  CITIES.forEach((city) => {
+    const cx = mapX(city.lon);
+    const cy = mapY(city.lat);
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.shadowBlur = 0;
+
+  // Random urban light scatterings
+  ctx.fillStyle = '#ffe3a8';
+  for (let i = 0; i < 350; i++) {
     const rx = Math.random() * 2048;
     const ry = Math.random() * 1024;
     ctx.beginPath();
-    ctx.arc(rx, ry, Math.random() * 1.5 + 0.5, 0, Math.PI * 2);
+    ctx.arc(rx, ry, Math.random() * 1.2 + 0.4, 0, Math.PI * 2);
     ctx.fill();
   }
 
   const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   return texture;
 }
@@ -120,7 +186,6 @@ function createProceduralEarthTexture() {
 // Curved 3D Flight Arc component
 function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vector3; color: string }) {
   const curve = useMemo(() => {
-    // Elevate the midpoint to create a curved flight arch above Earth
     const mid = start.clone().add(end).multiplyScalar(0.5);
     const distance = start.distanceTo(end);
     mid.normalize().multiplyScalar(2 + distance * 0.25);
@@ -129,14 +194,14 @@ function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vec
   }, [start, end]);
 
   const tubeGeometry = useMemo(() => {
-    return new THREE.TubeGeometry(curve, 44, 0.008, 8, false);
+    return new THREE.TubeGeometry(curve, 44, 0.009, 8, false);
   }, [curve]);
 
   const particleRef = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
     if (particleRef.current) {
-      const t = (state.clock.getElapsedTime() * 0.3) % 1;
+      const t = (state.clock.getElapsedTime() * 0.35) % 1;
       const point = curve.getPoint(t);
       particleRef.current.position.copy(point);
     }
@@ -146,7 +211,7 @@ function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vec
     <group>
       {/* Glowing Tube Arc */}
       <mesh geometry={tubeGeometry}>
-        <meshBasicMaterial color={color} transparent opacity={0.65} />
+        <meshBasicMaterial color={color} transparent opacity={0.7} />
       </mesh>
 
       {/* Traveling Flight Particle */}
@@ -163,25 +228,8 @@ function EarthGlobe({ onSelectCity, selectedCity }: { onSelectCity: (city: any) 
   const globeRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
 
-  // Earth textures
-  const [earthTexture, setEarthTexture] = useState<THREE.Texture | null>(null);
-
-  useEffect(() => {
-    const loader = new THREE.TextureLoader();
-    // Try loading realistic NASA blue marble texture from CDN
-    loader.load(
-      'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/planets/earth_atmos_2048.jpg',
-      (tex) => {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        setEarthTexture(tex);
-      },
-      undefined,
-      () => {
-        // Fallback to rich procedural texture
-        setEarthTexture(createProceduralEarthTexture());
-      }
-    );
-  }, []);
+  // Initialize with instant procedural high-res texture so it NEVER renders as a white sphere
+  const earthTexture = useMemo(() => createProceduralEarthTexture(), []);
 
   // Smooth rotation
   useFrame((state, delta) => {
@@ -209,7 +257,7 @@ function EarthGlobe({ onSelectCity, selectedCity }: { onSelectCity: (city: any) 
         <meshBasicMaterial
           color="#38bdf8"
           transparent
-          opacity={0.18}
+          opacity={0.22}
           side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
         />
@@ -219,9 +267,8 @@ function EarthGlobe({ onSelectCity, selectedCity }: { onSelectCity: (city: any) 
       <mesh>
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial
-          map={earthTexture || undefined}
-          color={earthTexture ? '#ffffff' : '#0f2b48'}
-          roughness={0.65}
+          map={earthTexture}
+          roughness={0.4}
           metalness={0.1}
         />
       </mesh>
@@ -230,9 +277,9 @@ function EarthGlobe({ onSelectCity, selectedCity }: { onSelectCity: (city: any) 
       <mesh ref={cloudsRef}>
         <sphereGeometry args={[2.035, 64, 64]} />
         <meshStandardMaterial
-          color="#ffffff"
+          color="#e0f2fe"
           transparent
-          opacity={0.15}
+          opacity={0.18}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
@@ -258,7 +305,7 @@ function EarthGlobe({ onSelectCity, selectedCity }: { onSelectCity: (city: any) 
             {/* Pulsing Base Ring on Earth Surface */}
             <mesh position={pos} rotation={[Math.PI / 2, 0, 0]}>
               <ringGeometry args={[0.03, 0.065, 24]} />
-              <meshBasicMaterial color={city.color} transparent opacity={0.8} side={THREE.DoubleSide} />
+              <meshBasicMaterial color={city.color} transparent opacity={0.85} side={THREE.DoubleSide} />
             </mesh>
 
             {/* Glowing 3D Pin Head */}
@@ -364,9 +411,10 @@ export default function InteractiveGlobe() {
       
       {/* Dynamic Cosmic Background & 3D WebGL Canvas */}
       <Canvas camera={{ position: [0, 0, 4.5], fov: 55 }} className="w-full h-full">
-        <ambientLight intensity={1.2} />
-        <directionalLight position={[5, 3, 5]} intensity={2.2} />
-        <pointLight position={[-5, -3, -5]} intensity={0.8} color="#38bdf8" />
+        {/* Balanced Lighting for Rich Shading without Overexposure */}
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[5, 3, 5]} intensity={1.5} />
+        <directionalLight position={[-5, -3, -5]} intensity={0.4} color="#1e40af" />
         
         {/* Background Starfield */}
         <Stars radius={100} depth={50} count={2500} factor={4} saturation={0} fade speed={1} />
