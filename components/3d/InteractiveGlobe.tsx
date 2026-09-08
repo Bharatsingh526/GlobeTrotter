@@ -2,22 +2,22 @@
 
 import React, { useRef, useState, useEffect, useMemo, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html, Stars, useTexture } from '@react-three/drei';
+import { OrbitControls, Stars, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe as GlobeIcon, Loader2, ArrowRight, Sparkles, Navigation, Compass } from 'lucide-react';
+import { Globe as GlobeIcon, Loader2, ArrowRight, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
-// Featured cities data with coordinates
+// Featured cities data
 const CITIES = [
-  { id: 'paris', name: 'Paris', country: 'France', flag: '🇫🇷', lat: 48.8566, lon: 2.3522, color: '#FF5A5F', desc: 'The city of light, romance, and iconic art.', cost: '$$$$', pop: '9.8/10', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=600' },
-  { id: 'rome', name: 'Rome', country: 'Italy', flag: '🇮🇹', lat: 41.9028, lon: 12.4964, color: '#FF7A00', desc: 'A historic cradle of ancient ruins and world-class culinary art.', cost: '$$$', pop: '9.2/10', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=600' },
-  { id: 'tokyo', name: 'Tokyo', country: 'Japan', flag: '🇯🇵', lat: 35.6762, lon: 139.6503, color: '#00E5FF', desc: 'Futuristic neon skyscrapers alongside ancient shrines.', cost: '$$$$', pop: '9.9/10', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=600' },
-  { id: 'dubai', name: 'Dubai', country: 'UAE', flag: '🇦🇪', lat: 25.2048, lon: 55.2708, color: '#FFB800', desc: 'World-record skyscrapers, desert dunes, and luxury living.', cost: '$$$$$', pop: '9.5/10', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=600' },
-  { id: 'london', name: 'London', country: 'UK', flag: '🇬🇧', lat: 51.5074, lon: -0.1278, color: '#A060FF', desc: 'Royal history, West End theatre, and iconic landmarks.', cost: '$$$$', pop: '9.3/10', image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=600' },
-  { id: 'nyc', name: 'New York', country: 'USA', flag: '🇺🇸', lat: 40.7128, lon: -74.0060, color: '#00FF88', desc: 'The bustling concrete jungle and culture capital that never sleeps.', cost: '$$$$$', pop: '9.7/10', image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&q=80&w=600' },
-  { id: 'singapore', name: 'Singapore', country: 'Singapore', flag: '🇸🇬', lat: 1.3521, lon: 103.8198, color: '#00E5FF', desc: 'Futuristic botanical gardens, luxury, and street food paradises.', cost: '$$$$', pop: '9.4/10', image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=600' },
-  { id: 'bali', name: 'Bali', country: 'Indonesia', flag: '🇮🇩', lat: -8.4095, lon: 115.1889, color: '#FF5A5F', desc: 'Spiritual cliffside temples, beach clubs, and serene rice terraces.', cost: '$$', pop: '9.6/10', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=600' },
+  { id: 'paris', name: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522, color: '#FF5A5F', desc: 'The city of light, romance, and iconic art.', cost: '$$$$', pop: '9.8/10', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&q=80&w=600' },
+  { id: 'rome', name: 'Rome', country: 'Italy', lat: 41.9028, lon: 12.4964, color: '#FF7A00', desc: 'A historic cradle of ancient ruins and world-class culinary art.', cost: '$$$', pop: '9.2/10', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&q=80&w=600' },
+  { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, color: '#00E5FF', desc: 'Futuristic neon skyscrapers alongside ancient shrines.', cost: '$$$$', pop: '9.9/10', image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?auto=format&fit=crop&q=80&w=600' },
+  { id: 'dubai', name: 'Dubai', country: 'UAE', lat: 25.2048, lon: 55.2708, color: '#FFB800', desc: 'World-record skyscrapers, desert dunes, and luxury living.', cost: '$$$$$', pop: '9.5/10', image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=600' },
+  { id: 'london', name: 'London', country: 'UK', lat: 51.5074, lon: -0.1278, color: '#A060FF', desc: 'Royal history, West End theatre, and iconic landmarks.', cost: '$$$$', pop: '9.3/10', image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=600' },
+  { id: 'nyc', name: 'New York', country: 'USA', lat: 40.7128, lon: -74.0060, color: '#00FF88', desc: 'The bustling concrete jungle and culture capital that never sleeps.', cost: '$$$$$', pop: '9.7/10', image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&q=80&w=600' },
+  { id: 'singapore', name: 'Singapore', country: 'Singapore', lat: 1.3521, lon: 103.8198, color: '#00E5FF', desc: 'Futuristic botanical gardens, luxury, and street food paradises.', cost: '$$$$', pop: '9.4/10', image: 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&q=80&w=600' },
+  { id: 'bali', name: 'Bali', country: 'Indonesia', lat: -8.4095, lon: 115.1889, color: '#FF5A5F', desc: 'Spiritual cliffside temples, beach clubs, and serene rice terraces.', cost: '$$', pop: '9.6/10', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=600' },
 ];
 
 // Flight route connections
@@ -43,18 +43,18 @@ function convertLatLngToVector3(lat: number, lon: number, radius = 2) {
   return new THREE.Vector3(x, y, z);
 }
 
-// 3D Animated Flight Tube Arc component
+// 3D Flight Tube Arc component
 function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vector3; color: string }) {
   const curve = useMemo(() => {
     const mid = start.clone().add(end).multiplyScalar(0.5);
     const distance = start.distanceTo(end);
-    mid.normalize().multiplyScalar(2 + distance * 0.25);
+    mid.normalize().multiplyScalar(2 + distance * 0.22);
 
     return new THREE.QuadraticBezierCurve3(start, mid, end);
   }, [start, end]);
 
   const tubeGeometry = useMemo(() => {
-    return new THREE.TubeGeometry(curve, 44, 0.009, 8, false);
+    return new THREE.TubeGeometry(curve, 44, 0.007, 8, false);
   }, [curve]);
 
   const particleRef = useRef<THREE.Mesh>(null);
@@ -71,24 +71,24 @@ function FlightArc({ start, end, color }: { start: THREE.Vector3; end: THREE.Vec
     <group>
       {/* Glowing Arc Line */}
       <mesh geometry={tubeGeometry}>
-        <meshBasicMaterial color={color} transparent opacity={0.75} />
+        <meshBasicMaterial color={color} transparent opacity={0.6} />
       </mesh>
 
-      {/* Traveling Flight Energy Light */}
+      {/* Traveling Energy Particle */}
       <mesh ref={particleRef}>
-        <sphereGeometry args={[0.025, 12, 12]} />
+        <sphereGeometry args={[0.022, 12, 12]} />
         <meshBasicMaterial color="#FFFFFF" />
       </mesh>
     </group>
   );
 }
 
-// Photorealistic Earth Sphere using UNPKG high-res NASA maps
-function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (city: any) => void; selectedCity: any }) {
+// Photorealistic Satellite Earth Mesh (Clean Satellite Image Globe with NO text labels)
+function SatelliteEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (city: any) => void; selectedCity: any }) {
   const globeRef = useRef<THREE.Group>(null);
   const cloudsRef = useRef<THREE.Mesh>(null);
 
-  // Load NASA photorealistic textures with R3F useTexture hook
+  // Load satellite imagery textures
   const [colorMap, bumpMap, lightsMap, cloudsMap] = useTexture([
     'https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',
     'https://unpkg.com/three-globe/example/img/earth-topology.png',
@@ -99,10 +99,10 @@ function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
   // Smooth rotation animation
   useFrame((state, delta) => {
     if (globeRef.current) {
-      globeRef.current.rotation.y += delta * 0.05;
+      globeRef.current.rotation.y += delta * 0.04;
     }
     if (cloudsRef.current) {
-      cloudsRef.current.rotation.y += delta * 0.07;
+      cloudsRef.current.rotation.y += delta * 0.06;
     }
   });
 
@@ -116,7 +116,7 @@ function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
 
   return (
     <group ref={globeRef}>
-      {/* Atmosphere Outer Glow Halo */}
+      {/* Outer Blue Atmosphere Glow Halo */}
       <mesh>
         <sphereGeometry args={[2.22, 64, 64]} />
         <meshBasicMaterial
@@ -128,36 +128,36 @@ function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
         />
       </mesh>
 
-      {/* Photorealistic Earth Surface (Day Side & 3D Mountain Terrain Relief) */}
+      {/* Pure Satellite Imagery Earth Surface (3D Terrain Relief & Oceans) */}
       <mesh>
         <sphereGeometry args={[2, 64, 64]} />
         <meshStandardMaterial
           map={colorMap}
           bumpMap={bumpMap}
           bumpScale={0.04}
-          roughness={0.65}
+          roughness={0.6}
           metalness={0.1}
         />
       </mesh>
 
-      {/* Glowing City Night Lights Layer (Night Side) */}
+      {/* Earth Night Lights Layer (Glowing Cities on Night Side) */}
       <mesh>
         <sphereGeometry args={[2.002, 64, 64]} />
         <meshBasicMaterial
           map={lightsMap}
           transparent
-          opacity={0.85}
+          opacity={0.8}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Real Rotating Cloud Atmosphere Layer */}
+      {/* Satellite Cloud Layer */}
       <mesh ref={cloudsRef}>
         <sphereGeometry args={[2.035, 64, 64]} />
         <meshStandardMaterial
           map={cloudsMap}
           transparent
-          opacity={0.38}
+          opacity={0.32}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
@@ -170,57 +170,25 @@ function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
         return <FlightArc key={i} start={start} end={end} color={route.color} />;
       })}
 
-      {/* 3D Vertical Light Beacons & Interactive Pin Markers */}
+      {/* Subtle 3D Glowing City Pins (NO text labels over globe) */}
       {CITIES.map((city) => {
         const pos = cityVectors.get(city.id) || new THREE.Vector3();
         const isSelected = selectedCity?.id === city.id;
-
-        // Vector positions for beacon beam
-        const surfacePos = pos.clone();
-        const topPos = pos.clone().normalize().multiplyScalar(2.18);
-        const midPos = surfacePos.clone().add(topPos).multiplyScalar(0.5);
-        const height = surfacePos.distanceTo(topPos);
+        const pinHeadPos = pos.clone().normalize().multiplyScalar(2.08);
 
         return (
           <group key={city.id}>
-            {/* Pulsing Ground Surface Ring */}
-            <mesh position={surfacePos} rotation={[Math.PI / 2, 0, 0]}>
-              <ringGeometry args={[0.035, 0.07, 24]} />
-              <meshBasicMaterial color={city.color} transparent opacity={0.9} side={THREE.DoubleSide} />
+            {/* Pulsing Ground Ring */}
+            <mesh position={pos} rotation={[Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.02, 0.05, 24]} />
+              <meshBasicMaterial color={city.color} transparent opacity={0.85} side={THREE.DoubleSide} />
             </mesh>
 
-            {/* Vertical Light Beacon Beam */}
-            <mesh position={midPos} quaternion={new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize())}>
-              <cylinderGeometry args={[0.008, 0.008, height, 12]} />
-              <meshBasicMaterial color={city.color} transparent opacity={0.8} />
-            </mesh>
-
-            {/* Glowing 3D Top Sphere Pin */}
-            <mesh position={topPos} onClick={() => onSelectCity(city)}>
-              <sphereGeometry args={[isSelected ? 0.07 : 0.048, 24, 24]} />
+            {/* Glowing Pin Marker Dot */}
+            <mesh position={pinHeadPos} onClick={() => onSelectCity(city)}>
+              <sphereGeometry args={[isSelected ? 0.055 : 0.035, 24, 24]} />
               <meshBasicMaterial color={isSelected ? '#FFFFFF' : city.color} />
             </mesh>
-
-            {/* Interactive HTML Hover / Click Badge Label */}
-            <Html position={topPos} distanceFactor={7.5} zIndexRange={[100, 0]}>
-              <div
-                onClick={() => onSelectCity(city)}
-                className={`group cursor-pointer select-none transition-all duration-300 transform -translate-x-1/2 -translate-y-full mb-2.5 ${
-                  isSelected ? 'scale-110 z-30' : 'hover:scale-105 z-10'
-                }`}
-              >
-                <div
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-xl border shadow-2xl transition-all ${
-                    isSelected
-                      ? 'bg-gradient-to-r from-brand-primary to-orange-500 text-white border-white'
-                      : 'bg-slate-900/90 text-slate-100 border-slate-700/80 hover:bg-brand-primary hover:text-white'
-                  }`}
-                >
-                  <span className="text-xs">{city.flag}</span>
-                  <span className="text-xs font-extrabold tracking-wide whitespace-nowrap">{city.name}</span>
-                </div>
-              </div>
-            </Html>
           </group>
         );
       })}
@@ -228,9 +196,8 @@ function RealisticEarthMesh({ onSelectCity, selectedCity }: { onSelectCity: (cit
   );
 }
 
-// 3D Canvas Container with Suspense Loader
 export default function InteractiveGlobe() {
-  const [selectedCity, setSelectedCity] = useState<any>(CITIES[0]); // Default Paris
+  const [selectedCity, setSelectedCity] = useState<any>(null);
   const [hasWebGL, setHasWebGL] = useState(true);
   const [loading, setLoading] = useState(true);
 
@@ -268,24 +235,6 @@ export default function InteractiveGlobe() {
             <div className="w-[60%] h-[60%] rounded-full border border-cyan-500/10 absolute" />
           </div>
 
-          <div className="absolute inset-0 z-10">
-            {CITIES.map((city, idx) => {
-              const xPos = 144 + Math.sin((city.lon * Math.PI) / 180) * 110;
-              const yPos = 144 - Math.sin((city.lat * Math.PI) / 180) * 80;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedCity(city)}
-                  style={{ left: `${xPos}px`, top: `${yPos}px` }}
-                  className="absolute w-5 h-5 -ml-2.5 -mt-2.5 rounded-full flex items-center justify-center cursor-pointer focus:outline-none transition-transform hover:scale-125 z-20"
-                >
-                  <span className="absolute inset-0 rounded-full bg-cyan-400 animate-ping opacity-75" />
-                  <span className="relative w-3 h-3 rounded-full bg-cyan-400 border border-white" />
-                </button>
-              );
-            })}
-          </div>
-
           <div className="w-16 h-16 rounded-full bg-slate-900 shadow-2xl flex items-center justify-center border border-cyan-500/30 z-20">
             <GlobeIcon className="w-7 h-7 text-cyan-400 animate-spin-slow" />
           </div>
@@ -297,18 +246,18 @@ export default function InteractiveGlobe() {
   return (
     <div className="relative w-full h-[520px] md:h-[620px] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden">
       
-      {/* Dynamic Cosmic Background & 3D WebGL Canvas */}
+      {/* 3D WebGL Canvas with Real Satellite Earth */}
       <Canvas camera={{ position: [0, 0, 4.5], fov: 55 }} className="w-full h-full">
-        {/* Realistic Solar & Atmosphere Lighting */}
+        {/* Photorealistic Space & Solar Lighting */}
         <ambientLight intensity={0.65} />
         <directionalLight position={[6, 3, 6]} intensity={2.2} />
         <directionalLight position={[-6, -3, -6]} intensity={0.6} color="#0284c7" />
         
-        {/* Background Cosmic Starfield */}
-        <Stars radius={100} depth={50} count={3000} factor={4} saturation={0} fade speed={1.5} />
+        {/* Cosmic Background Starfield */}
+        <Stars radius={100} depth={50} count={3500} factor={4} saturation={0} fade speed={1.5} />
         
         <Suspense fallback={null}>
-          <RealisticEarthMesh onSelectCity={setSelectedCity} selectedCity={selectedCity} />
+          <SatelliteEarthMesh onSelectCity={setSelectedCity} selectedCity={selectedCity} />
         </Suspense>
         
         <OrbitControls
@@ -318,7 +267,7 @@ export default function InteractiveGlobe() {
           maxDistance={5.8}
           rotateSpeed={0.5}
           autoRotate={!selectedCity}
-          autoRotateSpeed={0.5}
+          autoRotateSpeed={0.4}
         />
       </Canvas>
 
@@ -326,13 +275,13 @@ export default function InteractiveGlobe() {
       <div className="absolute top-5 left-5 md:top-7 md:left-7 pointer-events-none text-left z-10">
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-[10px] md:text-xs font-extrabold uppercase tracking-widest mb-1.5 backdrop-blur-md">
           <Sparkles className="w-3.5 h-3.5" />
-          <span>NASA 3D Photorealistic Earth</span>
+          <span>Real Satellite Earth</span>
         </div>
-        <h3 className="font-serif text-2xl md:text-3xl text-white font-extrabold tracking-tight">Explore Destinations</h3>
-        <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-0.5">DRAG TO ROTATE • CLICK PINS OR FLAGS</p>
+        <h3 className="font-serif text-2xl md:text-3xl text-white font-extrabold tracking-tight">Interactive 3D Satellite Map</h3>
+        <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-0.5">DRAG TO ROTATE • CLICK PINS TO INSPECT</p>
       </div>
 
-      {/* Selected City Details Card */}
+      {/* Selected Destination Modal Card */}
       <AnimatePresence>
         {selectedCity && (
           <motion.div
@@ -352,7 +301,6 @@ export default function InteractiveGlobe() {
                 ✕
               </button>
               <div className="absolute bottom-3 left-3 flex items-center gap-2">
-                <span className="text-base">{selectedCity.flag}</span>
                 <span className="text-[10px] font-extrabold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-cyan-500/90 text-slate-950">
                   {selectedCity.country}
                 </span>
@@ -363,7 +311,7 @@ export default function InteractiveGlobe() {
               <div className="flex justify-between items-center">
                 <h4 className="font-serif text-2xl font-extrabold text-white leading-tight">{selectedCity.name}</h4>
                 <div className="bg-slate-800/90 px-2.5 py-1 rounded-full border border-slate-700">
-                  <span className="text-[10px] font-bold text-cyan-400">Score: {selectedCity.pop}</span>
+                  <span className="text-[10px] font-bold text-cyan-400">Rating: {selectedCity.pop}</span>
                 </div>
               </div>
               <p className="text-xs text-slate-300 mt-2 leading-relaxed font-sans">{selectedCity.desc}</p>
